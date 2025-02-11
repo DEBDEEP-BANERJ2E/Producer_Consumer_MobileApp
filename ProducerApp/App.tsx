@@ -1,112 +1,51 @@
-import React from 'react';
-import type { PropsWithChildren } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import React, { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import LoginScreen from "./src/screens/LoginScreen";
+import TokenDashboard from "./src/screens/TokenDashboard";
 
-import TokenGenerator from './src/screens/TokenGenerator.tsx';
-import './src/services/TokenService.ts';
-import './src/api/producerAPI.ts';
+const Stack = createStackNavigator();
 
-type SectionProps = PropsWithChildren<{ title: string }>;
+const App = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-function Section({ children, title }: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={[styles.sectionContainer, { backgroundColor: isDarkMode ? '#222' : '#fff' }]}>
-      <Text
-        style={[styles.sectionTitle, { color: isDarkMode ? '#EAEAEA' : '#333' }]}
-      >
-        {title}
-      </Text>
-      <Text
-        style={[styles.sectionDescription, { color: isDarkMode ? '#BBB' : '#666' }]}
-      >
-        {children}
-      </Text>
-    </View>
-  );
-}
+  // Check authentication status
+  const checkAuthStatus = async () => {
+    const authToken = await AsyncStorage.getItem("authToken");
+    setIsAuthenticated(!!authToken);
+    setIsLoading(false);
+  };
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F8F9FA' }]}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={isDarkMode ? '#1E1E1E' : '#F8F9FA'}
-      />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.scrollView}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerText}>🚀 Producer App</Text>
-        </View>
-        <Section title="Token Generation">
-          Manage and generate tokens seamlessly with the integrated Token Service.
-        </Section>
-        <View style={styles.tokenContainer}>
-          <TokenGenerator />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {isAuthenticated ? (
+          <Stack.Screen name="TokenDashboard">
+            {(props) => <TokenDashboard {...props} onLogout={checkAuthStatus} />}
+          </Stack.Screen>
+        ) : (
+          <Stack.Screen name="Login">
+            {(props) => <LoginScreen {...props} onLogin={checkAuthStatus} />}
+          </Stack.Screen>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    paddingHorizontal: 16,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: '#6200EE',
-    borderRadius: 12,
-    marginVertical: 16,
-    elevation: 4, // Adds shadow effect (Android)
-    shadowColor: '#000', // iOS shadow
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-  },
-  headerText: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  sectionContainer: {
-    marginVertical: 16,
-    padding: 20,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  sectionDescription: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 22,
-  },
-  tokenContainer: {
-    marginTop: 20,
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 3,
-  },
-});
+};
 
 export default App;
